@@ -32,7 +32,7 @@ binary_representation = bin(number)[2:]  # 'bin'関数で2進数に変換し、�
 st.info(f'🔢 10進数の「{number}」を2進数で表現すると「{binary_representation}」になります。 🔢')  # 2進数の表示をハイライト
 
 min_val =st.number_input('最小値を入力してください', value=0)
-max_val = st.number_input('最大値」を入力してください', valse=10)
+max_val = st.number_input('最大値を入力してください', value=10)
 
 if st.button('乱数を生成'):
     random_num = random.randint(min_val,max_val)
