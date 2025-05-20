@@ -8,7 +8,7 @@ st.set_page_config(page_title="タイトル", layout="wide")
 st.title('kirari')
 
 # テキスト入力ボックスを作成し、ユーザーからの入力を受け取る
-user_input = st.text_input('やっほー')
+user_input = st.text_input('推し')
 
 # ボタンを作成し、クリックされたらメッセージを表示
 if st.button('挨拶する'):
