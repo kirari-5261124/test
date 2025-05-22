@@ -12,3 +12,6 @@ bmi = w/(h**2)
 dbmi = round(bmi,2)
 
 st.header('あなたの名前は' + str(dbmi) + 'です')
+st.slider('年齢を選択してください'0,100)
+fuits = {'りんご'：'red','バナナ'：'yellow'}
+         
