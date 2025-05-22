@@ -13,5 +13,4 @@ dbmi = round(bmi,2)
 
 st.header('あなたの名前は' + str(dbmi) + 'です')
 st.slider('年齢を選択してください'0,100)
-fuits = {'りんご'：'red','バナナ'：'yellow'}
-         print(fuits_key(fuits))
+fuits = st.selectbox('好きな果物を選んでください',['リンゴ','バナナ','チェリー'])
