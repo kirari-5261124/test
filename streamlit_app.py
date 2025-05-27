@@ -12,5 +12,8 @@ bmi = w/(h**2)
 dbmi = round(bmi,2)
 
 st.header('あなたのBMIは' + str(dbmi) + 'です')
-st.slider('年齢を選択してください' 0, 100)
+
+st.slider('年齢を選択してください', 0, 100)
+
+st.slider('年齢を選択してください', 0, 100)
 fuits = st.selectbox('好きな果物を選んでください', ['リンゴ','バナナ','チェリー'])
