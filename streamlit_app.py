@@ -1,59 +1,33 @@
 import streamlit as st
-from PIL import Image
-import numpy as np
-import colorspacious as cs
-import os
 
-# 色弱タイプの定義
-COLOR_VISION_TYPES = {
-    "正常色覚 (Normal Vision)": None,
-    "プロトノピア（赤）": {"name": "sRGB1", "cvd_type": "protan", "severity": 100},
-    "デューテラノピア（緑）": {"name": "sRGB1", "cvd_type": "deutan", "severity": 100},
-    "トリタノピア（青）": {"name": "sRGB1", "cvd_type": "tritan", "severity": 100},
-}
+st.set_page_config(page_title="パーソナルカラー診断", layout="centered")
+st.title("🎨 パーソナルカラー簡易診断")
 
-# StreamlitのUI
-st.set_page_config(page_title="色弱シミュレーター", layout="centered")
-st.title("🧠 色弱シミュレーションアプリ")
+st.markdown("""
+肌の色や髪の色、目の色、似合う色の傾向などから、あなたのパーソナルカラーを推測します。
+""")
 
-# サンプル画像の読み込み
-sample_path = "sample.jpg"
-if os.path.exists(sample_path):
-    sample_image = Image.open(sample_path).convert("RGB")
-    st.sidebar.image(sample_image, caption="📷 サンプル画像", use_column_width=True)
-else:
-    st.sidebar.warning("sample.jpg が見つかりません。")
+# 質問項目
+skin_tone = st.selectbox("あなたの肌の色は？", ["明るくピンクがかっている", "明るく黄みがかっている", "オークル系", "暗めで黄みが強い"])
+hair_color = st.selectbox("髪の色は？", ["黒に近い", "明るいブラウン", "赤みがある", "アッシュ系"])
+eye_color = st.selectbox("目の色は？", ["黒・ダークブラウン", "明るい茶色", "グレーっぽい", "グリーンっぽい"])
+favorite_colors = st.multiselect("どんな色の服を着ると褒められますか？", ["白", "パステルカラー", "ビビッドカラー", "アースカラー", "黒・ネイビー"])
 
-# ファイルアップロード or サンプル画像使用
-uploaded_file = st.file_uploader("画像をアップロードするか、サンプルを使ってください", type=["png", "jpg", "jpeg"])
-use_sample = st.checkbox("📎 サンプル画像を使う", value=uploaded_file is None)
-
-# 色覚タイプの選択
-vision_type = st.selectbox("シミュレーションする色覚タイプを選択", list(COLOR_VISION_TYPES.keys()))
-
-# 対象画像を取得
-if uploaded_file:
-    image = Image.open(uploaded_file).convert("RGB")
-elif use_sample and os.path.exists(sample_path):
-    image = sample_image
-else:
-    image = None
-
-if image:
-    st.subheader("🖼️ 元の画像")
-    st.image(image, use_column_width=True)
-
-    if COLOR_VISION_TYPES[vision_type] is not None:
-        # NumPy配列に変換（0〜1）
-        img_array = np.array(image) / 255.0
-        simulated = cs.cvd_simulate(img_array, COLOR_VISION_TYPES[vision_type])
-
-        # PIL画像に変換
-        simulated_img = Image.fromarray((simulated * 255).astype("uint8"))
-
-        st.subheader(f"🎨 {vision_type} のシミュレーション結果")
-        st.image(simulated_img, use_column_width=True)
+if st.button("診断する"):
+    # 簡易ルールベース診断
+    if "パステルカラー" in favorite_colors or skin_tone == "明るくピンクがかっている":
+        result = "スプリング または サマー"
+        tone = "明るく柔らかい色が似合います 🌸"
+    elif "アースカラー" in favorite_colors or skin_tone == "オークル系":
+        result = "オータム"
+        tone = "深みのある暖色が似合います 🍁"
+    elif "ビビッドカラー" in favorite_colors or hair_color == "アッシュ系":
+        result = "ウィンター"
+        tone = "はっきりとしたコントラストの強い色が似合います ❄️"
     else:
-        st.info("正常色覚が選択されています。シミュレーションは行われません。")
-else:
-    st.warning("画像が選択されていません。アップロードまたはサンプルを選んでください。")
+        result = "中間タイプ（ニュートラル）"
+        tone = "多くの色を着こなせます 🎨"
+
+    st.subheader("🧾 診断結果")
+    st.markdown(f"**推定タイプ：{result}**")
+    st.info(tone)
