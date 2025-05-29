@@ -4,56 +4,63 @@ import numpy as np
 import colorspacious as cs
 import os
 
-# 色弱タイプの定義
-COLOR_VISION_TYPES = {
-    "正常色覚 (Normal Vision)": None,
-    "プロトノピア（赤）": {"name": "sRGB1", "cvd_type": "protan", "severity": 100},
-    "デューテラノピア（緑）": {"name": "sRGB1", "cvd_type": "deutan", "severity": 100},
-    "トリタノピア（青）": {"name": "sRGB1", "cvd_type": "tritan", "severity": 100},
+# 色弱タイプ定義
+COLOR_VISION_SIMULATIONS = {
+    "プロトノピア 🔴": {"cvd_type": "protan", "severity": 100},
+    "デューテラノピア 🟢": {"cvd_type": "deutan", "severity": 100},
+    "トリタノピア 🔵": {"cvd_type": "tritan", "severity": 100},
 }
 
-# StreamlitのUI
-st.set_page_config(page_title="色弱シミュレーター", layout="centered")
-st.title("🧠 色弱シミュレーションアプリ")
+st.set_page_config(page_title="色弱シミュレーション比較", layout="wide")
+st.title("👁 色弱シミュレーション比較アプリ（4分割ビュー）")
 
-# サンプル画像の読み込み
+# サンプル画像（任意で差し替え可能）
 sample_path = "sample.jpg"
 if os.path.exists(sample_path):
     sample_image = Image.open(sample_path).convert("RGB")
-    st.sidebar.image(sample_image, caption="📷 サンプル画像", use_column_width=True)
 else:
-    st.sidebar.warning("sample.jpg が見つかりません。")
+    sample_image = None
 
-# ファイルアップロード or サンプル画像使用
-uploaded_file = st.file_uploader("画像をアップロードするか、サンプルを使ってください", type=["png", "jpg", "jpeg"])
-use_sample = st.checkbox("📎 サンプル画像を使う", value=uploaded_file is None)
+# UI構築
+st.markdown("画像をアップロードするか、サンプル画像を使用してください。")
+col1, col2 = st.columns([2, 1])
+with col1:
+    uploaded_file = st.file_uploader("画像をアップロード", type=["png", "jpg", "jpeg"])
+with col2:
+    use_sample = st.checkbox("📎 サンプル画像を使う", value=(uploaded_file is None))
 
-# 色覚タイプの選択
-vision_type = st.selectbox("シミュレーションする色覚タイプを選択", list(COLOR_VISION_TYPES.keys()))
-
-# 対象画像を取得
+# 入力画像の決定
 if uploaded_file:
     image = Image.open(uploaded_file).convert("RGB")
-elif use_sample and os.path.exists(sample_path):
+elif use_sample and sample_image:
     image = sample_image
 else:
     image = None
 
+# シミュレーション処理
 if image:
-    st.subheader("🖼️ 元の画像")
-    st.image(image, use_column_width=True)
+    img_array = np.array(image) / 255.0
 
-    if COLOR_VISION_TYPES[vision_type] is not None:
-        # NumPy配列に変換（0〜1）
-        img_array = np.array(image) / 255.0
-        simulated = cs.cvd_simulate(img_array, COLOR_VISION_TYPES[vision_type])
+    # 変換後画像を保存
+    sim_images = {}
+    for label, params in COLOR_VISION_SIMULATIONS.items():
+        simulated = cs.cvd_simulate(img_array, {
+            "name": "sRGB1",
+            "cvd_type": params["cvd_type"],
+            "severity": params["severity"]
+        })
+        sim_img = Image.fromarray((simulated * 255).astype("uint8"))
+        sim_images[label] = sim_img
 
-        # PIL画像に変換
-        simulated_img = Image.fromarray((simulated * 255).astype("uint8"))
+    # 表示
+    st.subheader("🖼️ 比較ビュー")
+    col1, col2, col3, col4 = st.columns(4)
 
-        st.subheader(f"🎨 {vision_type} のシミュレーション結果")
-        st.image(simulated_img, use_column_width=True)
-    else:
-        st.info("正常色覚が選択されています。シミュレーションは行われません。")
+    col1.markdown("**🎨 オリジナル**")
+    col1.image(image, use_column_width=True)
+
+    for col, (label, sim_img) in zip([col2, col3, col4], sim_images.items()):
+        col.markdown(f"**{label}**")
+        col.image(sim_img, use_column_width=True)
 else:
-    st.warning("画像が選択されていません。アップロードまたはサンプルを選んでください。")
+    st.warning("画像がありません。アップロードするか、サンプルを使ってください。")
