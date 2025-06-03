@@ -40,34 +40,40 @@ def app():
     # 画像アップロード
     uploaded_file = st.file_uploader("画像をアップロード", type=["jpg", "jpeg", "png"])
 
-    # 色弱タイプ選択
-    color_blind_type = st.selectbox(
-        "色弱のタイプを選択",
-        ["なし", "Deuteranopia", "Protanopia", "Tritanopia"]
-    )
-
     if uploaded_file is not None:
-        image = Image.open(uploaded_file)
-        st.image(image, caption='アップロードした画像', use_column_width=True)
+        try:
+            image = Image.open(uploaded_file)
+            st.image(image, caption='アップロードした画像', use_column_width=True)
 
-        # シミュレーション実行
-        if color_blind_type != "なし":
-            simulated_image = simulate_color_blindness(image, color_blind_type)
-            st.image(simulated_image, caption=f'{color_blind_type}シミュレーション後', use_column_width=True)
-            
-            # 保存ボタン
-            save_button = st.button(f"{color_blind_type} シミュレーション画像を保存")
-            if save_button:
-                filename = f"{color_blind_type}_{uploaded_file.name}"
-                save_image(simulated_image, filename)
-                st.success(f"{color_blind_type}画像が保存されました: {filename}")
-                
-                # ダウンロードリンクを表示
-                download_link = get_image_download_link(simulated_image, filename)
-                st.markdown(download_link, unsafe_allow_html=True)
+            # 色弱タイプ選択
+            color_blind_type = st.selectbox(
+                "色弱のタイプを選択",
+                ["なし", "Deuteranopia", "Protanopia", "Tritanopia"]
+            )
 
-        else:
-            st.warning("色弱タイプを選択してください")
+            if color_blind_type != "なし":
+                # シミュレーション実行
+                simulated_image = simulate_color_blindness(image, color_blind_type)
+                st.image(simulated_image, caption=f'{color_blind_type}シミュレーション後', use_column_width=True)
+
+                # 保存ボタン
+                save_button = st.button(f"{color_blind_type} シミュレーション画像を保存")
+                if save_button:
+                    filename = f"{color_blind_type}_{uploaded_file.name}"
+                    save_image(simulated_image, filename)
+                    st.success(f"{color_blind_type}画像が保存されました: {filename}")
+
+                    # ダウンロードリンクを表示
+                    download_link = get_image_download_link(simulated_image, filename)
+                    st.markdown(download_link, unsafe_allow_html=True)
+
+            else:
+                st.warning("色弱タイプを選択してください")
+
+        except Exception as e:
+            st.error(f"画像の処理中にエラーが発生しました: {str(e)}")
+    else:
+        st.info("画像をアップロードしてください。")
 
     # 保存された画像を表示
     st.subheader("保存された画像一覧")
