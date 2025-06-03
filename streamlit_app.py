@@ -1,59 +1,86 @@
 import streamlit as st
 from PIL import Image
 import numpy as np
-import colorspacious as cs
 import os
+import io
+import base64
 
-# 色弱タイプの定義
-COLOR_VISION_TYPES = {
-    "正常色覚 (Normal Vision)": None,
-    "プロトノピア（赤）": {"name": "sRGB1", "cvd_type": "protan", "severity": 100},
-    "デューテラノピア（緑）": {"name": "sRGB1", "cvd_type": "deutan", "severity": 100},
-    "トリタノピア（青）": {"name": "sRGB1", "cvd_type": "tritan", "severity": 100},
-}
+# 色弱シミュレーション関数
+def simulate_color_blindness(image, type):
+    img = np.array(image)
+    if type == 'Deuteranopia':
+        img[:, :, 0] = img[:, :, 1] = img[:, :, 2] = 0  # 仮の変換処理
+    elif type == 'Protanopia':
+        img[:, :, 1] = img[:, :, 2] = 0  # 仮の変換処理
+    elif type == 'Tritanopia':
+        img[:, :, 0] = img[:, :, 1] = 0  # 仮の変換処理
+    return Image.fromarray(img)
 
-# StreamlitのUI
-st.set_page_config(page_title="色弱シミュレーター", layout="centered")
-st.title("🧠 色弱シミュレーションアプリ")
+# 画像を保存する関数
+def save_image(image, filename):
+    # 保存先ディレクトリ
+    save_dir = 'saved_images'
+    if not os.path.exists(save_dir):
+        os.makedirs(save_dir)
+    
+    # 画像を保存
+    image.save(os.path.join(save_dir, filename))
 
-# サンプル画像の読み込み
-sample_path = "sample.jpg"
-if os.path.exists(sample_path):
-    sample_image = Image.open(sample_path).convert("RGB")
-    st.sidebar.image(sample_image, caption="📷 サンプル画像", use_column_width=True)
-else:
-    st.sidebar.warning("sample.jpg が見つかりません。")
+# 画像をBase64エンコードしてダウンロードリンクを作成
+def get_image_download_link(image, filename):
+    buffered = io.BytesIO()
+    image.save(buffered, format="PNG")
+    img_str = base64.b64encode(buffered.getvalue()).decode()
+    return f'<a href="data:file/png;base64,{img_str}" download="{filename}">画像をダウンロード</a>'
 
-# ファイルアップロード or サンプル画像使用
-uploaded_file = st.file_uploader("画像をアップロードするか、サンプルを使ってください", type=["png", "jpg", "jpeg"])
-use_sample = st.checkbox("📎 サンプル画像を使う", value=uploaded_file is None)
+# アプリケーションのUI
+def app():
+    st.title("色弱シミュレーション比較アプリ")
 
-# 色覚タイプの選択
-vision_type = st.selectbox("シミュレーションする色覚タイプを選択", list(COLOR_VISION_TYPES.keys()))
+    # 画像アップロード
+    uploaded_file = st.file_uploader("画像をアップロード", type=["jpg", "jpeg", "png"])
 
-# 対象画像を取得
-if uploaded_file:
-    image = Image.open(uploaded_file).convert("RGB")
-elif use_sample and os.path.exists(sample_path):
-    image = sample_image
-else:
-    image = None
+    # 色弱タイプ選択
+    color_blind_type = st.selectbox(
+        "色弱のタイプを選択",
+        ["なし", "Deuteranopia", "Protanopia", "Tritanopia"]
+    )
 
-if image:
-    st.subheader("🖼️ 元の画像")
-    st.image(image, use_column_width=True)
+    if uploaded_file is not None:
+        image = Image.open(uploaded_file)
+        st.image(image, caption='アップロードした画像', use_column_width=True)
 
-    if COLOR_VISION_TYPES[vision_type] is not None:
-        # NumPy配列に変換（0〜1）
-        img_array = np.array(image) / 255.0
-        simulated = cs.cvd_simulate(img_array, COLOR_VISION_TYPES[vision_type])
+        # シミュレーション実行
+        if color_blind_type != "なし":
+            simulated_image = simulate_color_blindness(image, color_blind_type)
+            st.image(simulated_image, caption=f'{color_blind_type}シミュレーション後', use_column_width=True)
+            
+            # 保存ボタン
+            save_button = st.button(f"{color_blind_type} シミュレーション画像を保存")
+            if save_button:
+                filename = f"{color_blind_type}_{uploaded_file.name}"
+                save_image(simulated_image, filename)
+                st.success(f"{color_blind_type}画像が保存されました: {filename}")
+                
+                # ダウンロードリンクを表示
+                download_link = get_image_download_link(simulated_image, filename)
+                st.markdown(download_link, unsafe_allow_html=True)
 
-        # PIL画像に変換
-        simulated_img = Image.fromarray((simulated * 255).astype("uint8"))
+        else:
+            st.warning("色弱タイプを選択してください")
 
-        st.subheader(f"🎨 {vision_type} のシミュレーション結果")
-        st.image(simulated_img, use_column_width=True)
-    else:
-        st.info("正常色覚が選択されています。シミュレーションは行われません。")
-else:
-    st.warning("画像が選択されていません。アップロードまたはサンプルを選んでください。")
+    # 保存された画像を表示
+    st.subheader("保存された画像一覧")
+    saved_images = os.listdir('saved_images')
+    if saved_images:
+        for image_file in saved_images:
+            st.image(f'saved_images/{image_file}', caption=image_file, use_column_width=True)
+
+            # 画像選択ボタン
+            select_button = st.button(f"{image_file}を選択")
+            if select_button:
+                selected_image = Image.open(f'saved_images/{image_file}')
+                st.image(selected_image, caption=f"選択された画像: {image_file}", use_column_width=True)
+
+if __name__ == "__main__":
+    app()
