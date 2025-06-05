@@ -37,6 +37,10 @@ def get_image_download_link(image, filename):
 def app():
     st.title("色弱シミュレーション比較アプリ")
 
+    # 保存ディレクトリの存在チェック・作成
+    if not os.path.exists('saved_images'):
+        os.makedirs('saved_images')
+
     # 画像アップロード
     uploaded_file = st.file_uploader("画像をアップロード", type=["jpg", "jpeg", "png"])
 
