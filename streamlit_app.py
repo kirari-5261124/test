@@ -1,96 +1,94 @@
 import streamlit as st
 from PIL import Image
 import numpy as np
-import os
-import io
-import base64
 
 # 色弱シミュレーション関数
-def simulate_color_blindness(image, type):
-    img = np.array(image)
-    if type == 'Deuteranopia':
-        img[:, :, 0] = img[:, :, 1] = img[:, :, 2] = 0  # 仮の変換処理
-    elif type == 'Protanopia':
-        img[:, :, 1] = img[:, :, 2] = 0  # 仮の変換処理
-    elif type == 'Tritanopia':
-        img[:, :, 0] = img[:, :, 1] = 0  # 仮の変換処理
-    return Image.fromarray(img)
-
-# 画像を保存する関数
-def save_image(image, filename):
-    # 保存先ディレクトリ
-    save_dir = 'saved_images'
-    if not os.path.exists(save_dir):
-        os.makedirs(save_dir)
+def simulate_cvd(img: Image.Image, mode: str) -> Image.Image:
+    img_np = np.array(img).astype(float) / 255.0
     
-    # 画像を保存
-    image.save(os.path.join(save_dir, filename))
+    matrices = {
+        'protan': np.array([[0.56667, 0.43333, 0.0],
+                            [0.55833, 0.44167, 0.0],
+                            [0.0, 0.24167, 0.75833]]),
+        'deutan': np.array([[0.625, 0.375, 0.0],
+                            [0.7, 0.3, 0.0],
+                            [0.0, 0.3, 0.7]]),
+        'tritan': np.array([[0.95, 0.05, 0.0],
+                            [0.0, 0.43333, 0.56667],
+                            [0.0, 0.475, 0.525]])
+    }
+    
+    matrix = matrices.get(mode)
+    if matrix is None:
+        return img
 
-# 画像をBase64エンコードしてダウンロードリンクを作成
-def get_image_download_link(image, filename):
-    buffered = io.BytesIO()
-    image.save(buffered, format="PNG")
-    img_str = base64.b64encode(buffered.getvalue()).decode()
-    return f'<a href="data:file/png;base64,{img_str}" download="{filename}">画像をダウンロード</a>'
+    shape = img_np.shape
+    img_reshaped = img_np.reshape(-1, 3)
+    transformed = img_reshaped @ matrix.T
+    transformed = np.clip(transformed, 0, 1)
+    img_transformed = transformed.reshape(shape)
+    img_out = (img_transformed * 255).astype(np.uint8)
+    return Image.fromarray(img_out)
 
-# アプリケーションのUI
-def app():
-    st.title("色弱シミュレーション比較アプリ")
+st.title("色弱シミュレーション比較アプリ")
 
-    # 保存ディレクトリの存在チェック・作成
-    if not os.path.exists('saved_images'):
-        os.makedirs('saved_images')
+st.markdown("""
+アップロードは最大3枚まで可能です。アップロードがない場合はサンプル画像で比較します。
+""")
 
-    # 画像アップロード
-    uploaded_file = st.file_uploader("画像をアップロード", type=["jpg", "jpeg", "png"])
+uploaded_files = st.file_uploader(
+    "画像をアップロードしてください (複数可、最大3枚)",
+    type=["png", "jpg", "jpeg"],
+    accept_multiple_files=True
+)
 
-    if uploaded_file is not None:
-        try:
-            image = Image.open(uploaded_file)
-            st.image(image, caption='アップロードした画像', use_column_width=True)
+# サンプル画像（Streamlit付属のものを利用）
+from PIL import ImageDraw, ImageFont
 
-            # 色弱タイプ選択
-            color_blind_type = st.selectbox(
-                "色弱のタイプを選択",
-                ["なし", "Deuteranopia", "Protanopia", "Tritanopia"]
-            )
+def create_sample_image(text: str):
+    img = Image.new("RGB", (300, 200), (255, 255, 255))
+    d = ImageDraw.Draw(img)
+    try:
+        font = ImageFont.truetype("arial.ttf", 40)
+    except:
+        font = ImageFont.load_default()
+    w, h = d.textsize(text, font=font)
+    d.text(((300-w)/2, (200-h)/2), text, fill=(0, 0, 0), font=font)
+    return img
 
-            if color_blind_type != "なし":
-                # シミュレーション実行
-                simulated_image = simulate_color_blindness(image, color_blind_type)
-                st.image(simulated_image, caption=f'{color_blind_type}シミュレーション後', use_column_width=True)
+sample_images = [
+    create_sample_image("Sample 1"),
+    create_sample_image("Sample 2"),
+    create_sample_image("Sample 3")
+]
 
-                # 保存ボタン
-                save_button = st.button(f"{color_blind_type} シミュレーション画像を保存")
-                if save_button:
-                    filename = f"{color_blind_type}_{uploaded_file.name}"
-                    save_image(simulated_image, filename)
-                    st.success(f"{color_blind_type}画像が保存されました: {filename}")
+# アップロード画像があれば使い、なければサンプルを使用
+if uploaded_files:
+    if len(uploaded_files) > 3:
+        st.warning("最大3枚までアップロード可能です。最初の3枚を使用します。")
+        uploaded_files = uploaded_files[:3]
+    images = [Image.open(f).convert("RGB") for f in uploaded_files]
+else:
+    st.info("アップロードがないためサンプル画像を表示します。")
+    images = sample_images
 
-                    # ダウンロードリンクを表示
-                    download_link = get_image_download_link(simulated_image, filename)
-                    st.markdown(download_link, unsafe_allow_html=True)
+modes = ['original', 'protan', 'deutan', 'tritan']
+mode_names = {
+    'original': 'オリジナル',
+    'protan': 'プロタノピア（赤色盲）',
+    'deutan': 'デュタノピア（緑色盲）',
+    'tritan': 'トリタノピア（青色盲）'
+}
 
+for idx, img in enumerate(images):
+    st.subheader(f"画像 {idx + 1}")
+    cols = st.columns(len(modes))
+    
+    for i, mode in enumerate(modes):
+        with cols[i]:
+            st.markdown(f"**{mode_names[mode]}**")
+            if mode == 'original':
+                st.image(img, use_column_width=True)
             else:
-                st.warning("色弱タイプを選択してください")
-
-        except Exception as e:
-            st.error(f"画像の処理中にエラーが発生しました: {str(e)}")
-    else:
-        st.info("画像をアップロードしてください。")
-
-    # 保存された画像を表示
-    st.subheader("保存された画像一覧")
-    saved_images = os.listdir('saved_images')
-    if saved_images:
-        for image_file in saved_images:
-            st.image(f'saved_images/{image_file}', caption=image_file, use_column_width=True)
-
-            # 画像選択ボタン
-            select_button = st.button(f"{image_file}を選択")
-            if select_button:
-                selected_image = Image.open(f'saved_images/{image_file}')
-                st.image(selected_image, caption=f"選択された画像: {image_file}", use_column_width=True)
-
-if __name__ == "__main__":
-    app()
+                sim_img = simulate_cvd(img, mode)
+                st.image(sim_img, use_column_width=True)
