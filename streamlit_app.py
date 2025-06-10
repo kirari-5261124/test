@@ -14,26 +14,18 @@ sim_types = {
 }
 sim_choice = st.selectbox("シミュレーションタイプを選択", list(sim_types.keys()))
 
-# 画像アップロード
-uploaded_file = st.file_uploader("画像をアップロードしてください", type=["png", "jpg", "jpeg"])
-
 # サンプル画像のパス（ローカルに画像がある場合）
 sample_image_path = "sample.jpg"
 
-# アップロードされていない場合、サンプル画像を表示
-if uploaded_file:
-    img = Image.open(uploaded_file).convert("RGB")
-    st.image(img, caption="元画像", use_column_width=True)
-else:
-    # サンプル画像を表示
-    try:
-        img = Image.open(sample_image_path).convert("RGB")
-        st.image(img, caption="サンプル画像", use_column_width=True)
-    except FileNotFoundError:
-        st.write("サンプル画像が見つかりませんでした。")
+# サンプル画像を表示
+try:
+    img = Image.open(sample_image_path).convert("RGB")
+    st.image(img, caption="サンプル画像", use_column_width=True)
+except FileNotFoundError:
+    st.write("サンプル画像が見つかりませんでした。")
 
 # シミュレーション処理
-if uploaded_file or not uploaded_file:  # 画像がアップロードされている場合でもサンプル画像の場合でも
+if img:  # 画像が読み込めている場合
     if sim_choice != "正常":
         # PIL→numpy
         img_np = np.array(img) / 255.0
