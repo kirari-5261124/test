@@ -26,7 +26,11 @@ if img:
         img_np = np.array(img) / 255.0
         cb_type = sim_types[sim_choice]
 
-        img_sim = cspace_convert(img_np, "sRGB1", ("sRGB1+CVD", {"simulate_type": cb_type}))
+        img_sim = cspace_convert(
+            img_np, 
+            "sRGB1", 
+            ("sRGB1+CVD", {"simulate_type": cb_type})
+        )
         img_sim = np.clip(img_sim, 0, 1)
         img_sim = (img_sim * 255).astype(np.uint8)
 
