@@ -14,7 +14,7 @@ sim_types = {
     "トリタノピア（青が見えにくい）": "tritanomaly"
 }
 sim_choice = st.selectbox("シミュレーションタイプを選択", list(sim_types.keys()))
-severity = st.slider("色覚異常の強さ（severity）", 0, 100, 100)
+severity = st.slider("色覚異常の強さ（severity）", 0, 100, 50)
 
 # サンプル画像読み込み
 sample_image_path = "sample.jpg"
