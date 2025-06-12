@@ -1,45 +1,50 @@
 import streamlit as st
 from PIL import Image
 import numpy as np
-from colorspacious import cspace_convert  # type: ignore
+from colorspacious import cspace_convert
+from streamlit_image_comparison import image_comparison
 
-st.title("色弱シミュレーション比較アプリ")
+# タイトル
+st.title("色弱シミュレーション・ビフォーアフター比較アプリ")
 
+# 色覚タイプと強度
 sim_types = {
-    "正常": None,
-    "プロタノピア (赤弱)": "protanomaly",
-    "デューテラノピア (緑弱)": "deuteranomaly",
-    "トリタノピア (青弱)": "tritanomaly"
+    "プロタノピア（赤が見えにくい）": "protanomaly",
+    "デューテラノピア（緑が見えにくい）": "deuteranomaly",
+    "トリタノピア（青が見えにくい）": "tritanomaly"
 }
 sim_choice = st.selectbox("シミュレーションタイプを選択", list(sim_types.keys()))
+severity = st.slider("色覚異常の強さ（severity）", 0, 100, 100)
 
+# サンプル画像読み込み
 sample_image_path = "sample.jpg"
-
-img = None
 try:
     img = Image.open(sample_image_path).convert("RGB")
-    st.image(img, caption="サンプル画像", use_column_width=True)
+    img_np = np.array(img) / 255.0
+
+    # 色弱シミュレーション画像生成
+    cb_type = sim_types[sim_choice]
+    img_sim = cspace_convert(
+        img_np,
+        start="sRGB1",
+        end={
+            "name": "sRGB1+CVD",
+            "cvd_type": cb_type,
+            "severity": severity
+        }
+    )
+    img_sim = np.clip(img_sim, 0, 1)
+    img_sim = (img_sim * 255).astype(np.uint8)
+    img_sim_pil = Image.fromarray(img_sim)
+
+    # 🔄 ビフォーアフター比較
+    st.subheader("ビフォーアフター比較（スライダーで違いを確認）")
+    image_comparison(
+        img1=img,
+        img2=img_sim_pil,
+        label1="オリジナル",
+        label2=f"{sim_choice} シミュレーション",
+    )
+
 except FileNotFoundError:
-    st.write("サンプル画像が見つかりませんでした。")
-
-if img:
-    if sim_choice != "正常":
-        img_np = np.array(img) / 255.0
-        cb_type = sim_types[sim_choice]
-
-        img_sim = cspace_convert(
-            img_np,
-            start="sRGB1",
-            end={
-                "name": "sRGB1+CVD",
-                "cvd_type": cb_type,
-                "severity": 100  
-            }
-        )
-
-        img_sim = np.clip(img_sim, 0, 1)
-        img_sim = (img_sim * 255).astype(np.uint8)
-
-        st.image(img_sim, caption=f"{sim_choice} シミュレーション", use_column_width=True)
-    else:
-        st.write("元画像を表示しています。")
+    st.error("サンプル画像（sample.jpg）が見つかりません。アプリと同じフォルダに配置してください。")
