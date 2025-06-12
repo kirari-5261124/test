@@ -1,7 +1,7 @@
 import streamlit as st
 from PIL import Image
 import numpy as np
-from colorspacious import cspace_convert # type: ignore
+from colorspacious import cspace_convert  # type: ignore
 
 st.title("色弱シミュレーション比較アプリ")
 
@@ -15,6 +15,7 @@ sim_choice = st.selectbox("シミュレーションタイプを選択", list(sim
 
 sample_image_path = "sample.jpg"
 
+img = None
 try:
     img = Image.open(sample_image_path).convert("RGB")
     st.image(img, caption="サンプル画像", use_column_width=True)
@@ -27,10 +28,15 @@ if img:
         cb_type = sim_types[sim_choice]
 
         img_sim = cspace_convert(
-            img_np, 
-            start={"name":"sRGB1"}, 
-            end={"name" : "CVD","simulate_type" : cb_type}
+            img_np,
+            start="sRGB1",
+            end={
+                "name": "sRGB1+CVD",
+                "cvd_type": cb_type,
+                "severity": 100  
+            }
         )
+
         img_sim = np.clip(img_sim, 0, 1)
         img_sim = (img_sim * 255).astype(np.uint8)
 
