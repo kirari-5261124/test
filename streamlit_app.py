@@ -4,7 +4,7 @@ import numpy as np
 from colorspacious import cspace_convert
 from streamlit_image_comparison import image_comparison
 
-# タイトル
+# タイトルa
 st.title("色弱シミュレーション・ビフォーアフター比較アプリ")
 
 # 色覚タイプと強度
