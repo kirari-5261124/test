@@ -1,50 +1,59 @@
 import streamlit as st
+from PIL import Image
 
-st.title("ユニバーサルデザイン")
-import streamlit as st
-import random
+st.title("🎨 色覚異常チェックテスト")
+st.write("""
+以下の画像に含まれる数字が見えますか？
+見えた数字を選択肢から選んでください。
+""")
 
-# 色覚ユニバーサルデザインに配慮したカラーパレット
-color_palette = {
-    'red': '#D65F5F',
-    'green': '#5F8D5F',
-    'blue': '#5F5F8D',
-    'orange': '#D78F3B',
-    'purple': '#9B5F9B'
-}
+# 色覚異常テスト用の画像と回答
+tests = [
+    {
+        "image": "ishihara_12.png",
+        "question": "この画像に見える数字は？",
+        "options": ["12", "6", "なし", "8"],
+        "answer": "12"
+    },
+    {
+        "image": "ishihara_8.png",
+        "question": "この画像に見える数字は？",
+        "options": ["3", "8", "6", "見えない"],
+        "answer": "8"
+    },
+    {
+        "image": "ishihara_6.png",
+        "question": "この画像に見える数字は？",
+        "options": ["6", "5", "2", "見えない"],
+        "answer": "6"
+    }
+]
 
-# 問題を生成する関数
-def generate_question():
-    # ランダムに色のペアを選択
-    color1, color2 = random.sample(list(color_palette.values()), 2)
-    # 問題を表示
-    question = f"この2色のうち、異なる色を選んでください："
-    st.write(question)
-    col1, col2 = st.columns(2)
-    with col1:
-        st.markdown(f'<div style="background-color:{color1};height:100px;width:100px;"></div>', unsafe_allow_html=True)
-    with col2:
-        st.markdown(f'<div style="background-color:{color2};height:100px;width:100px;"></div>', unsafe_allow_html=True)
-    return color1, color2
+score = 0
+total = len(tests)
 
-# ユーザーの選択肢を取得する関数
-def user_answer(correct_color, color1, color2):
-    selected = st.radio("選択肢", options=[color1, color2])
-    if selected == correct_color:
-        st.success("正解です！")
+for i, test in enumerate(tests):
+    st.subheader(f"テスト {i + 1}")
+    # 画像表示
+    image = Image.open(test["image"])
+    st.image(image, width=300)
+    
+    # ユーザー回答取得
+    user_answer = st.radio(test["question"], test["options"], key=f"q{i}")
+    
+    # 答え合わせ（ボタン押下後に判定するので、一旦結果保存）
+    tests[i]["user_answer"] = user_answer
+
+if st.button("結果を表示"):
+    for test in tests:
+        if test["user_answer"] == test["answer"]:
+            score += 1
+    st.success(f"正解数: {score} / {total}")
+    if score == total:
+        st.info("色覚異常の兆候は見られません。")
+    elif score == 0:
+        st.warning("色覚異常の可能性があります。専門医の診断をおすすめします。")
     else:
-        st.error("不正解です。もう一度挑戦してください！")
+        st.warning("一部誤答があります。気になる場合は専門医へ。")
 
-def main():
-    st.title("カラーユニバーサルデザイン視覚テスト")
-    st.write("色の識別テストです。異なる色を見つけて選んでください。")
-
-    # 問題を生成
-    color1, color2 = generate_question()
-    correct_color = color1  # 正解色を色1とする
-
-    # ユーザーの回答を確認
-    user_answer(correct_color, color1, color2)
-
-if __name__ == "__main__":
-    main()
+st.caption("※このテストは簡易的なチェック用です。正式な診断は専門機関で行ってください。")
